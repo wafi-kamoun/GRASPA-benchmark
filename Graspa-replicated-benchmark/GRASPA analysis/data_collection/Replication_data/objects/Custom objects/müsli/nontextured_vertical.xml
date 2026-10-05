@@ -1,0 +1,6 @@
+<ManipulationObject name="müsli">
+    <Visualization>
+        <File type="inventor">./nontextured_vertical.stl</File>
+        <UseAsCollisionModel/>
+    </Visualization>
+</ManipulationObject>
