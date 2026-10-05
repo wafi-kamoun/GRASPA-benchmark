@@ -1,6 +1,0 @@
-scikit-build
-scipy
-numpy
-numpy-stl
-opencv-python
-opencv-contrib-python
