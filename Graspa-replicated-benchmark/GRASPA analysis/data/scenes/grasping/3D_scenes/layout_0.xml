@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Scene name="Benchmark_Layout_0">
+
+  <ManipulationObject name='YcbBanana'>
+    <File>data/objects/YCB/banana/nontextured.xml</File>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1="0.14604904729655777" c2="0.9892261196429094" c3="0.0" c4="-217.47071146230508" />
+          <row2 c1="0.9892261196429094" c2="-0.14604904729655774" c3="0.0" c4="124.68819410514675" />
+          <row3 c1="0.0" c2="0.0" c3="-1.0" c4="34.0" />
+          <row4 c1="0.0" c2="0.0" c3="0.0" c4="1.0" />
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </ManipulationObject>
+
+ <ManipulationObject name='YcbMustardBottle'>
+    <File>data/objects/YCB/mustard_bottle/nontextured.xml</File>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1="-0.6573616876859348" c2="-0.7535752792937805" c3="0.0" c4="-97.98895018668021" />
+          <row2 c1="0.7535752792937805" c2="-0.6573616876859348" c3="0.0" c4="162.93877678175247" />
+          <row3 c1="0.0" c2="0.0" c3="1.0" c4="2.0" />
+          <row4 c1="0.0" c2="0.0" c3="0.0" c4="1.0" />
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </ManipulationObject>
+
+   <ManipulationObject name='YcbPottedMeatCan'>
+    <File>data/objects/YCB/potted_meat_can/nontextured.xml</File>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1="-0.6245195162507654" c2="-0.7809810329463258" c3="0.0" c4="-259.58801931004285" />
+          <row2 c1="-0.7809810329463257" c2="0.6245195162507654" c3="0.0" c4="210.80440901497244" />
+          <row3 c1="0.0" c2="0.0" c3="-1.0" c4="79.0" />
+          <row4 c1="0.0" c2="0.0" c3="0.0" c4="1.0" />
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </ManipulationObject>
+
+  <ManipulationObject name='YcbGelatinBox'>
+    <File>data/objects/YCB/gelatin_box/nontextured.xml</File>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1="0.7493" c2="0.1593" c3="-0.6428" c4="-402.23" />
+          <row2 c1="0.6287" c2="0.1336" c3="0.766" c4="245.49" />
+          <row3 c1="0.2079" c2="-0.9781" c3="0.0" c4="38.0" />
+          <row4 c1="0.0" c2="0.0" c3="0.0" c4="1.0" />
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </ManipulationObject>
+
+  <ManipulationObject name='YcbFoamBrick'>
+    <File>data/objects/YCB/foam_brick/nontextured.xml</File>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1="0.9348" c2="0.3551" c3="0.0" c4="-371.56" />
+          <row2 c1="-0.3551" c2="0.9348" c3="0.0" c4="110.99000000000001" />
+          <row3 c1="0.0" c2="0.0" c3="1.0" c4="-2.0" />
+          <row4 c1="0.0" c2="0.0" c3="0.0" c4="1.0" />
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </ManipulationObject>
+
+  <Obstacle name='Table'>
+    <Visualization>
+		<File type='inventor'>data/objects/iv/board_layout_0.iv</File>
+		<UseAsCollisionModel/>
+	</Visualization>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1='1' c2='0' c3='0' c4='-256.5'/>
+          <row2 c1='0=' c2='1' c3='0' c4='180.5'/>
+          <row3 c1='0' c2='0' c3='1' c4='-1'/>
+          <row4 c1='0' c2='0' c3='0' c4='1'/>
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </Obstacle>
+
+  <Obstacle name='Frame'>
+    <Visualization>
+      <File>data/objects/misc/frame.wrl</File>
+    </Visualization>
+    <GlobalPose>
+      <Transform>
+        <Matrix4x4>
+          <row1 c1='1' c2='0' c3='0' c4='0'/>
+          <row2 c1='0=' c2='1' c3='0' c4='0'/>
+          <row3 c1='0' c2='0' c3='1' c4='0'/>
+          <row4 c1='0' c2='0' c3='0' c4='1'/>
+        </Matrix4x4>
+      </Transform>
+    </GlobalPose>
+  </Obstacle>
+
+</Scene>

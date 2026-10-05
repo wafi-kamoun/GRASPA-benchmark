@@ -1,0 +1,319 @@
+# syntax=docker/dockerfile:experimental
+
+# FIXED: Nvidia purged older CUDA 10.x images from Docker Hub. 
+# Bumped to CUDA 11.4.3 which is still officially hosted for Ubuntu 18.04.
+ARG from=nvidia/cuda:11.4.3-cudnn8-devel-ubuntu18.04
+FROM ${from}
+
+# Change default shell to bash
+SHELL ["/bin/bash", "-c"]
+
+# Install packages
+# ================
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends --fix-missing\
+        sudo \
+        gosu \
+        software-properties-common \
+        git \
+        wget \
+        curl \
+        nano \
+        unzip \
+        libgl1-mesa-glx \
+        libgl1-mesa-dri \
+        mesa-common-dev \
+        apt-transport-https \
+        apt-utils \
+        dbus-x11 \
+        bash-completion \
+        gdb \
+        ssh \
+        iputils-ping \
+        gnupg \
+        gnupg2 \
+        xvfb \
+        mercurial \
+        freeglut3-dev \
+        libflann-dev \
+        &&\
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add - && \
+    apt-add-repository "deb https://apt.kitware.com/ubuntu/ `lsb_release -cs` main" &&\
+    add-apt-repository ppa:ubuntu-toolchain-r/test &&\
+    add-apt-repository "deb http://security.ubuntu.com/ubuntu xenial-security main" && \
+    apt-get update &&\
+    apt-get install -y --no-install-recommends --fix-missing\
+        gcc-8 \
+        g++-8 \
+        cmake \
+        cmake-curses-gui \
+        build-essential \
+        mc \
+        lynx \
+        libqhull* \
+        pkg-config \
+        libxmu-dev \
+        libxi-dev \
+        libboost-all-dev \
+        libeigen3-dev \
+        libusb-1.0-0-dev \
+        libudev-dev \
+        doxygen \
+        graphviz \
+        libgtest-dev \
+        libpcap-dev \
+        libgtk2.0-dev \
+        libavcodec-dev \
+        libavformat-dev \
+        libjpeg.dev \
+        libtiff4.dev \
+        libswscale-dev \
+        libjasper-dev \
+        &&\
+    rm -rf /var/lib/apt/lists/*
+
+# Setup locales and timezone
+ENV TZ=Europe/Rome
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends locales locales-all tzdata &&\
+    rm -rf /var/lib/apt/lists/* &&\
+    echo "${TZ}" | tee /etc/timezone &&\
+    dpkg-reconfigure --frontend noninteractive tzdata
+
+
+# Install python3
+# ===============
+ENV PYTHON_VERSION=3.6
+RUN add-apt-repository ppa:deadsnakes/ppa &&\
+    apt-get update &&\
+    apt-get install -y --no-install-recommends \
+        python${PYTHON_VERSION} \
+        python${PYTHON_VERSION}-dev \
+        libpython${PYTHON_VERSION}-dev \
+        python3-pip \
+        python3-setuptools \
+        python3-wheel \
+        python3-pygments \
+        python3-numpy \
+        &&\
+    rm -rf /var/lib/apt/lists/*
+
+
+# Install ROS Desktop Full
+# ========================
+
+# https://github.com/osrf/docker_images/blob/master/ros/
+ENV ROS_DISTRO=melodic
+
+RUN apt-key adv --keyserver keyserver.ubuntu.com \
+                --recv-keys F42ED6FBAB17C654 &&\
+    echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -cs` main" \
+        > /etc/apt/sources.list.d/ros-latest.list &&\
+    apt-get update &&\
+    apt-get install -y --no-install-recommends \
+        ros-${ROS_DISTRO}-desktop-full \
+        ros-${ROS_DISTRO}-jsk-tools \
+        python-rosdep \
+        python-rosinstall \
+        python-rosinstall-generator \
+        python-vcstools \
+        python-wstool \
+        python-catkin-tools \
+        python3-catkin-pkg-modules \
+        python3-rospkg-modules \
+        python3-empy \
+        &&\
+    rm -rf /var/lib/apt/lists/* &&\
+    rosdep init &&\
+    rosdep update &&\
+    echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc
+
+# Set workspace directories
+# =========================
+ENV WS_DIR=/workspace
+ENV CATKIN_WS_DIR=${WS_DIR}/catkin_ws
+ENV WS_INSTALL=${WS_DIR}/install
+ENV WS_SOURCES=${WS_DIR}/sources
+ARG WS_BIN=${WS_SOURCES}/bin
+
+# Create a new runtimeusers group
+RUN groupadd -K GID_MIN=900 -K GID_MAX=1100 runtimeusers
+
+# Install Eigen
+# =============
+RUN mkdir -p ${WS_SOURCES} &&\
+    cd ${WS_SOURCES} &&\
+    git clone -b 3.2 https://gitlab.com/libeigen/eigen.git eigen &&\
+    cd eigen &&\
+    mkdir build &&\
+    cd build &&\
+    cmake  -D CMAKE_INSTALL_PREFIX=${WS_INSTALL} .. &&\
+    make -j8 &&\
+    make install &&\
+    find ${WS_SOURCES} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ &&\
+    find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Install VTK
+# ============
+RUN apt-get update &&\
+    apt-get install -y\
+    libvtk7* &&\
+    rm -rf /var/lib/apt/lists/*
+
+# Install PCL
+# ===========
+# FIXED: Capped CUDA architecture to 6.1 for PCL. 
+# Prevents fatal compiler errors caused by older warp voting instructions (__ballot) on sm_70+
+RUN cd ${WS_SOURCES}\
+    && wget https://github.com/PointCloudLibrary/pcl/archive/pcl-1.9.0.zip \
+    && unzip pcl-1.9.0.zip \
+    && cd pcl-pcl-1.9.0 \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=Release \
+             -D BUILD_GPU=ON \
+             -D BUILD_apps=ON \
+             -D BUILD_examples=ON \
+             -D CUDA_ARCH_BIN="5.2 6.0 6.1" \
+             -D CUDA_ARCH_PTX="6.1" \
+             -D CMAKE_INSTALL_PREFIX=${WS_INSTALL} .. \
+    && make -j8 \
+    && make install \
+    && find ${WS_SOURCES} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ \
+    && find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Install Opencv
+# ==============
+# FIXED: Explicitly turned off CUDA for OpenCV (WITH_CUDA=OFF). Older OpenCV + Modern CUDA throws unfixable header errors.
+RUN cd ${WS_SOURCES}\
+    && wget https://github.com/opencv/opencv/archive/3.4.3.zip \
+    && unzip 3.4.3.zip \
+    && cd opencv-3.4.3 \
+    && mkdir build \
+    && cd build \
+    && cmake -D WITH_OPENMP=ON \
+             -D ENABLE_PRECOMPILED_HEADERS=OFF \
+             -D WITH_CUDA=OFF \
+             -D CMAKE_INSTALL_PREFIX=${WS_INSTALL} ..\
+    && make -j 8 \
+    && make install \
+    && find ${WS_SOURCES} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ \
+    && find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Install CAFFE
+# =============
+# FIXED: Manually specified modern CUDA architectures so it doesn't crash on "compute_20" or "compute_30"
+# FIXED: Turned off cuDNN since Caffe's older source code is incompatible with the cuDNN 8 API in our base image.
+RUN apt-get update &&\
+    apt-get install -y \
+    libprotobuf-dev \
+    libleveldb-dev \
+    libsnappy-dev \
+    libopencv-dev \
+    libhdf5-serial-dev \
+    protobuf-compiler \
+    libboost-all-dev \
+    libatlas-base-dev \
+    liblmdb-dev \
+    libturbojpeg \
+    libturbojpeg0-dev \
+    libgoogle-glog-dev &&\
+    rm -rf /var/lib/apt/lists/* &&\
+    cd ${WS_SOURCES}\
+    && git clone https://github.com/fbottarel/caffe.git &&\
+    cd ${WS_SOURCES}/caffe \
+    && mkdir build \
+    && cd build \
+    && cmake -D BUILD_python=OFF \
+        -D BUILD_python_layer=OFF \
+        -D BLAS=Atlas \
+        -D USE_CUDNN=OFF \
+        -D CUDA_rt_LIBRARY=/usr/local/cuda/lib64/libcudart.so \
+        -D CUDA_ARCH_NAME=Manual \
+        -D CUDA_ARCH_BIN="52 60 61 70 75 80 86" \
+        -D CUDA_ARCH_PTX="86" \
+        -D CMAKE_INSTALL_PREFIX=${WS_INSTALL} \
+        ../ \
+    && make -j 8 \
+    && make install \
+    && find ${WS_SOURCES} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ \
+    && find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Install gpd
+# ===========
+RUN cd ${WS_SOURCES}\
+    && git clone https://github.com/atenpas/gpd gpd \
+    && cd gpd \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=RELEASE \
+        -D CMAKE_INSTALL_PREFIX=${WS_INSTALL}\
+        -D USE_CAFFE=ON \
+        -D Caffe_DIR=${WS_INSTALL}/share/Caffe \
+        .. \
+    && make -j8  \
+    && make install \
+    && find ${WS_SOURCES} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ \
+    && find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Create catkin_ws with dependencies/ros packages for python3
+# ===========================================================
+RUN apt-get update &&\
+    sudo apt-get install -y libboost-all-dev &&\
+    mkdir -p ${CATKIN_WS_DIR}/src && \
+    cd ${CATKIN_WS_DIR} &&\
+    wstool init &&\
+    wstool set -y src/geometry2 --git https://github.com/ros/geometry2 -v 0.6.5 &&\
+    wstool set -y src/vision_opencv --git https://github.com/ros-perception/vision_opencv -v 1.13.0 &&\
+    wstool set -y src/perception_pcl --git https://github.com/ros-perception/perception_pcl.git -v melodic-devel &&\
+    wstool up &&\
+    rosdep update && rosdep install --from-paths src --ignore-src -y -r --skip-keys "libpcl-all-dev" &&\
+    rm -rf /var/lib/apt/lists/*
+
+# Install benchmark-grasping
+# ==========================
+
+# FIXED: Changed single quotes to double quotes for correct bashrc ENV variable evaluation
+RUN cd ${CATKIN_WS_DIR}/src &&\
+    git clone https://github.com/hsp-panda/panda_ros_common &&\
+    git clone https://github.com/hsp-panda/grasping-benchmarks-panda.git &&\
+    pip3 install grasping-benchmarks-panda/ &&\
+    cd ${CATKIN_WS_DIR} && \
+    catkin config --extend /opt/ros/${ROS_DISTRO} -DPYTHON_EXECUTABLE=/usr/bin/python3 -DCMAKE_BUILD_TYPE=Release -DGPD_ROS=ON -DPCL_DIR=${WS_INSTALL}/share/pcl-1.9 &&\
+    catkin build  -j8 &&\
+    find ${CATKIN_WS_DIR} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ &&\
+    echo "source ${CATKIN_WS_DIR}/devel/setup.bash" >> /etc/bash.bashrc &&\
+    echo "export LD_LIBRARY_PATH=${WS_INSTALL}/lib:\${LD_LIBRARY_PATH}" >> /etc/bash.bashrc
+
+# =============
+# FIX OWNERSHIP
+# =============
+
+RUN find ${WS_DIR} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ &&\
+    find ${WS_INSTALL} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+ &&\
+    find ${CATKIN_WS_DIR} -not -group runtimeusers -exec chgrp runtimeusers {} \; -exec chmod g+rw {} \+
+
+# Nvidia runtime support
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+# Image initialization
+# ====================
+
+ENV USERNAME=docker
+
+# Include a custom bashrc
+COPY bashrc /usr/etc/skel/bashrc-dev
+
+COPY setup.sh /usr/sbin/setup.sh
+COPY entrypoint.sh /usr/sbin/entrypoint.sh
+RUN chmod 755 /usr/sbin/setup.sh
+RUN chmod 755 /usr/sbin/entrypoint.sh
+ENTRYPOINT ["/usr/sbin/entrypoint.sh"]
+CMD ["bash"]
